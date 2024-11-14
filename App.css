@@ -1,0 +1,105 @@
+/* OrderPage.css */
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+/* Main container for the Orders page */
+.orders-container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+/* Title for the Orders page */
+.orders-title {
+    text-align: center;
+    font-size: 2em;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Order item card */
+.order-item {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: box-shadow 0.3s;
+}
+
+    .order-item:hover {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Order item details */
+    .order-item h2 {
+        font-size: 1.5em;
+        margin: 0;
+    }
+
+    .order-item p {
+        font-size: 1em;
+        color: #666;
+    }
+
+/* Buttons */
+.button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.add-to-cart-btn, .view-cart-btn {
+    background-color: #28a745; /* Green */
+    color: white;
+    padding: 10px 20px;
+    margin: 0 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+    .add-to-cart-btn:hover, .view-cart-btn:hover {
+        background-color: #218838; /* Darker green */
+    }
+
+.remove-btn {
+    background-color: #dc3545; /* Red */
+    color: white;
+    padding: 10px 20px;
+    margin: 0 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+    .remove-btn:hover {
+        background-color: #c82333; /* Darker red */
+    }
+
+/* Responsive styles */
+@media (max-width: 600px) {
+    .orders-container {
+        padding: 10px;
+    }
+
+    .order-item {
+        flex-direction: column;
+    }
+
+    .button-container {
+        flex-direction: column;
+    }
+}
