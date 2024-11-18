@@ -1,47 +1,45 @@
-// OrdersPage.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './OrdersPage.css';
 
-function OrdersPage({ onAddToCart }) {
-    const [selectedPlan, setSelectedPlan] = useState('shortTerm');
-    const [quantity, setQuantity] = useState(1);
+const OrdersPage = ({ onAddToCart }) => {
     const [participantName, setParticipantName] = useState('');
-    const navigate = useNavigate();
+    const [quantity, setQuantity] = useState(1);
+    const [selectedPlan, setSelectedPlan] = useState('shortTerm');
     const [loading, setLoading] = useState(false);
+    const [startDate, setStartDate] = useState(new Date());
+    const [endDate, setEndDate] = useState(new Date());
 
+    const navigate = useNavigate();
+
+    const planDetails = selectedPlan === 'shortTerm' ? { amount: 50000, days: 10 } : { amount: 100000, days: 30 };
+
+    const handleQuantityChange = (change) => {
+        setQuantity((prevQuantity) => Math.max(1, prevQuantity + change));
+    };
     const handlePlanChange = (event) => setSelectedPlan(event.target.value);
-    const handleQuantityChange = (change) => setQuantity((prevQuantity) => Math.max(1, prevQuantity + change));
 
-    const planDetails =
-        selectedPlan === 'shortTerm'
-            ? { amount: 50000 * quantity, days: 10 * quantity }
-            : { amount: 100000 * quantity, days: 30 * quantity };
-
-    const startDate = new Date();
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + planDetails.days);
-
-    const formatDate = (date) => date.toISOString().split('T')[0];
-    const formattedStartDate = formatDate(startDate);
-    const formattedEndDate = formatDate(endDate);
-
+    // Function to handle adding the order to the cart
     const handleAddToCart = () => {
         if (!participantName.trim()) {
             alert('Please enter the participant name.');
             return;
         }
+
         const item = {
-            ...planDetails,
+            amount: planDetails.amount * quantity,
+            duration: planDetails.days * quantity,
             participantName,
             quantity,
-            startDate: formattedStartDate,
-            endDate: formattedEndDate,
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: endDate.toISOString().split('T')[0],
         };
+
         onAddToCart(item);
     };
 
+    // Function to handle loading Razorpay script
     const loadRazorpayScript = () => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -52,6 +50,7 @@ function OrdersPage({ onAddToCart }) {
         });
     };
 
+    // Function to handle payment
     const handlePayment = async () => {
         if (!participantName.trim()) {
             alert('Please enter the participant name.');
@@ -63,10 +62,10 @@ function OrdersPage({ onAddToCart }) {
             await loadRazorpayScript();
 
             const response = await axios.post('http://localhost:5000/orders', {
-                amount: planDetails.amount,
+                amount: planDetails.amount * quantity,
                 currency: 'INR',
-                duration: planDetails.days,
-                start_date: formattedStartDate,
+                duration: planDetails.days * quantity,
+                start_date: startDate.toISOString().split('T')[0],
                 participant_name: participantName,
                 quantity,
             });
@@ -113,6 +112,7 @@ function OrdersPage({ onAddToCart }) {
         }
     };
 
+    // Handle navigating to the Cart page
     const handleViewCart = () => {
         navigate('/cart');
     };
@@ -120,6 +120,7 @@ function OrdersPage({ onAddToCart }) {
     return (
         <div className="orderpage-container">
             <h2>Order Details</h2>
+
             <div className="button-group">
                 <div className="option-button">
                     <input
@@ -144,19 +145,19 @@ function OrdersPage({ onAddToCart }) {
             <div className="plan-details">
                 <div className="plan-input-group">
                     <label className="plan-label-input">Amount</label>
-                    <input className="plan-value-input" value={`₹${planDetails.amount}`} disabled />
+                    <input className="plan-value-input" value={`₹${planDetails.amount * quantity}`} disabled />
                 </div>
                 <div className="plan-input-group">
                     <label className="plan-label-input">Duration</label>
-                    <input className="plan-value-input" value={`${planDetails.days} days`} disabled />
+                    <input className="plan-value-input" value={`${planDetails.days * quantity} days`} disabled />
                 </div>
                 <div className="plan-input-group">
                     <label className="plan-label-input">Start Date</label>
-                    <input className="plan-value-input" value={formattedStartDate} disabled />
+                    <input className="plan-value-input" value={startDate.toISOString().split('T')[0]} disabled />
                 </div>
                 <div className="plan-input-group">
                     <label className="plan-label-input">End Date</label>
-                    <input className="plan-value-input" value={formattedEndDate} disabled />
+                    <input className="plan-value-input" value={endDate.toISOString().split('T')[0]} disabled />
                 </div>
             </div>
 
@@ -185,6 +186,7 @@ function OrdersPage({ onAddToCart }) {
             </div>
         </div>
     );
-}
+};
 
 export default OrdersPage;
+
