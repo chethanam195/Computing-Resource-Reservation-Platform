@@ -45,7 +45,7 @@ function CartPage({ cart, onRemoveItem }) {
                 order_id: order_id,
                 handler: function (response) {
                     alert("Payment successful!");
-                    navigate('/jupyter-putty');
+                    navigate('/Jupyterputty');
                 },
                 prefill: {
                     name: itemParticipantName,
