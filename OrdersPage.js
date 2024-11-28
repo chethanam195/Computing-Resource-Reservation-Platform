@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './OrdersPage.css';
+import './ordersPage.css';
 
 const OrdersPage = ({ onAddToCart }) => {
     const [participantName, setParticipantName] = useState('');
@@ -13,14 +13,22 @@ const OrdersPage = ({ onAddToCart }) => {
 
     const navigate = useNavigate();
 
-    const planDetails = selectedPlan === 'shortTerm' ? { amount: 50000, days: 10 } : { amount: 100000, days: 30 };
+    const planDetails = selectedPlan === 'shortTerm'
+        ? { amount: 50000, days: 10 }
+        : { amount: 100000, days: 30 };
 
     const handleQuantityChange = (change) => {
         setQuantity((prevQuantity) => Math.max(1, prevQuantity + change));
     };
+
     const handlePlanChange = (event) => setSelectedPlan(event.target.value);
 
-    // Function to handle adding the order to the cart
+    useEffect(() => {
+        const updatedEndDate = new Date(startDate);
+        updatedEndDate.setDate(updatedEndDate.getDate() + planDetails.days * quantity);
+        setEndDate(updatedEndDate);
+    }, [startDate, selectedPlan, quantity]);
+
     const handleAddToCart = () => {
         if (!participantName.trim()) {
             alert('Please enter the participant name.');
@@ -39,7 +47,6 @@ const OrdersPage = ({ onAddToCart }) => {
         onAddToCart(item);
     };
 
-    // Function to handle loading Razorpay script
     const loadRazorpayScript = () => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -50,7 +57,6 @@ const OrdersPage = ({ onAddToCart }) => {
         });
     };
 
-    // Function to handle payment
     const handlePayment = async () => {
         if (!participantName.trim()) {
             alert('Please enter the participant name.');
@@ -86,7 +92,7 @@ const OrdersPage = ({ onAddToCart }) => {
                         })
                         .then(() => {
                             alert('Payment successful!');
-                            navigate('/orders');
+                            navigate('/Jupyterputty'); // Navigate to JupyterPutty page
                         })
                         .catch((err) => {
                             console.error('Payment error:', err);
@@ -112,7 +118,6 @@ const OrdersPage = ({ onAddToCart }) => {
         }
     };
 
-    // Handle navigating to the Cart page
     const handleViewCart = () => {
         navigate('/cart');
     };
