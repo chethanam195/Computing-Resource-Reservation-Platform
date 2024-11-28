@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, linkWithPopup } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import './login.css';
-import linkedInLogo from './assets/linkedin-logo.jpg';
+import './Login.css';
+import linkedinlogo from './assets/linkedinlogo.png'; // Updated path
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -22,11 +22,10 @@ const Login = () => {
         e.preventDefault();
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            setIsEmailAuthenticated(true);
             setErrorMessage('');
             setSuccessMessage('Login successful!');
             setTimeout(() => {
-                navigate('/Orderpage');
+                navigate('/orders');  // Fix route: navigate to /orders page after login
             }, 1500);
         } catch (error) {
             setIsEmailAuthenticated(false);
@@ -44,9 +43,8 @@ const Login = () => {
         window.location.href = url;
     };
 
-    const handleGoogleSuccess = async (response) => {
-        // Once the Google login is successful, navigate to the Orders page
-        navigate('/Orderpage');
+    const handleGoogleSuccess = async () => {
+        navigate('/orders');  // Fix route: navigate to /orders page after Google login
     };
 
     const handleGoogleFailure = (error) => {
@@ -94,13 +92,13 @@ const Login = () => {
             {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
             {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
 
-            <p><a href="#" onClick={() => navigate('/forgot-password')}>Forgot Password?</a></p>
+            <p><a href="#" onClick={() => navigate('/forget-password')}>Forget Password?</a></p>
             <p>
                 Don't have an account? <a href="/register">Register here</a>
             </p>
 
             <button className="linkedin-button" onClick={handleLinkedInLogin}>
-                <img src={linkedInLogo} alt="LinkedIn Logo" style={{ width: '24px', height: '24px', marginRight: '8px' }} />
+                <img src={linkedinlogo} alt="LinkedIn Logo" style={{ width: '24px', height: '24px', marginRight: '8px' }} />
                 Login with LinkedIn
             </button>
 
