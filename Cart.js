@@ -1,4 +1,3 @@
-// CartPage.js
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
@@ -23,34 +22,42 @@ function CartPage({ cart, onRemoveItem }) {
     };
 
     const handlePayment = async (amount, itemParticipantName) => {
+        if (!amount || amount <= 0) {
+            alert("Invalid amount. Please try again.");
+            return;
+        }
+
         try {
             setLoading(true);
             await loadRazorpayScript();
 
+            // POST request to backend to create an order
             const response = await axios.post('http://localhost:5000/orders', {
                 amount: amount,
                 currency: 'INR',
-                duration: 30,
+                duration: 30,  // You can adjust this as per requirement
                 start_date: new Date().toISOString(),
                 participant_name: itemParticipantName,
                 quantity: 1,
+                email: 'test@example.com',  // Make sure you have a valid email
             });
 
+            // Extract order details from the response
             const { order_id, amount: orderAmount, currency } = response.data;
 
             const options = {
-                key: 'rzp_test_1BkbvUiG6Er2NL',
+                key: 'rzp_test_yZLR0HdMtSX5Hk',  // Replace with actual Razorpay key
                 amount: orderAmount,
                 currency: currency,
                 order_id: order_id,
                 handler: function (response) {
                     alert("Payment successful!");
-                    navigate('/Jupyterputty');
+                    navigate('/Jupyterputty'); // Redirect after successful payment
                 },
                 prefill: {
                     name: itemParticipantName,
-                    email: 'test@example.com',
-                    contact: '1234567890'
+                    email: 'test@example.com',  // Make sure this email matches the one on the backend
+                    contact: '1234567890',  // Contact number (replace with valid number if required)
                 },
                 theme: {
                     color: "#3399cc"
@@ -102,7 +109,9 @@ function CartPage({ cart, onRemoveItem }) {
             {cart.length > 0 && (
                 <div className="cart-summary">
                     <div className="total-amount">Total: ₹{totalAmount}</div>
-                    <button onClick={handleProceedToPayment} className="payment-button">Proceed to Payment</button>
+                    <button onClick={handleProceedToPayment} className="payment-button">
+                        {loading ? "Processing..." : "Proceed to Payment"}
+                    </button>
                 </div>
             )}
             <button onClick={handleGoBack} className="back-button">Back</button>
