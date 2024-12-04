@@ -1,116 +1,30 @@
+require('dotenv').config(); // Load environment variables
+
 const express = require("express");
-const { spawn } = require("child_process");
-const Razorpay = require("razorpay");
-const cors = require("cors");
 const mongoose = require("mongoose");
-const { Client } = require("ssh2");
+const Razorpay = require("razorpay");
+const emailService = require("./emailService"); // Email service for sending the invoice
+const cors = require("cors"); // Import CORS
+const { spawn } = require('child_process'); // For opening PuTTY
 
 const app = express();
 
+// Enable CORS for all origins
+app.use(cors()); // This will allow all origins. You can configure it further if needed.
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 
 // MongoDB setup
-const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/razorpayOrders";
+const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/razorpayOrders'; // MongoDB URI
 mongoose
     .connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log("Connected to MongoDB"))
     .catch((err) => console.error("MongoDB connection error:", err));
 
-// Razorpay instance setup (replace with actual keys in production)
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_1BkbvUiG6Er2NL",
-    key_secret: process.env.RAZORPAY_KEY_SECRET || "pi4ejIUly0gSxV0YVTtpGNx2",
-});
-
-// MongoDB Schema for Razorpay order details
-const orderSchema = new mongoose.Schema({
-    order_id: String,
-    amount: Number,
-    currency: String,
-    receipt: String,
-    status: { type: String, default: "created" },
-    created_at: { type: Date, default: Date.now },
-    duration: Number,
-    start_date: Date,
-    end_date: Date,
-    participant_name: String,
-    quantity: Number,
-});
-
-const Order = mongoose.model("Order", orderSchema);
-
-// Razorpay order creation API
-app.post("/orders", async (req, res) => {
-    const { amount, currency, duration, start_date, participant_name, quantity } = req.body;
-
-    if (!amount || !duration || !start_date || !participant_name || !quantity) {
-        return res.status(400).json({ error: "Invalid or missing parameters" });
-    }
-
-    const options = {
-        amount: amount * 100, // Convert to paise
-        currency: currency || "INR",
-        receipt: `receipt_${Date.now()}`,
-        payment_capture: 1,
-    };
-
-    try {
-        const response = await razorpay.orders.create(options);
-
-        const startDate = new Date(start_date);
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + duration);
-
-        const newOrder = new Order({
-            order_id: response.id,
-            amount: response.amount / 100,
-            currency: response.currency,
-            receipt: response.receipt,
-            duration,
-            start_date: startDate,
-            end_date: endDate,
-            participant_name,
-            quantity,
-        });
-
-        await newOrder.save();
-
-        res.json({
-            order_id: response.id,
-            currency: response.currency,
-            amount: response.amount,
-        });
-    } catch (error) {
-        console.error("Error creating Razorpay order:", error);
-        res.status(500).json({ error: "Failed to create order. Please try again." });
-    }
-});
-
-// Payment success API
-app.post("/payment/success", async (req, res) => {
-    const { order_id } = req.body;
-
-    try {
-        const order = await Order.findOne({ order_id });
-        if (!order) {
-            return res.status(404).json({ error: "Order not found." });
-        }
-
-        order.status = "paid";
-        await order.save();
-
-        res.json({ message: "Payment successful" });
-    } catch (error) {
-        console.error("Error processing payment:", error);
-        res.status(500).json({ error: "Failed to process payment. Please try again." });
-    }
-});
-
 // API to open PuTTY
 app.get("/api/open-putty", (req, res) => {
-    const puttyPath = process.env.PUTTY_PATH || "C:\\Users\\CDAC\\Downloads\\putty.exe"; // Update path if necessary
+    const puttyPath = process.env.PUTTY_PATH || "C:\\Users\\CDAC\\Downloads\\putty.exe"; // Default PuTTY path
 
     try {
         const puttyProcess = spawn(puttyPath);
@@ -130,29 +44,131 @@ app.get("/api/open-putty", (req, res) => {
     }
 });
 
-// SSH connection API
-app.post("/ssh-connect", (req, res) => {
-    const { host, port, username, privateKey, password } = req.body;
+// Razorpay setup (with hardcoded keys)
+const razorpay = new Razorpay({
+    key_id: "rzp_test_yZLR0HdMtSX5Hk", // Razorpay key_id
+    key_secret:"63z6wLMBLp1vAbsjpc7q5Rzk", // Razorpay key_secret
+});
 
-    const conn = new Client();
-    conn
-        .on("ready", () => {
-            res.send("SSH Connection Successful!");
-            conn.end(); // End the connection after successful login
-        })
-        .on("error", (err) => {
-            console.error("Error with SSH connection:", err);
-            res.status(500).send("SSH Connection Failed: " + err.message);
-        })
-        .connect({
-            host,
-            port: port || 22,
-            username,
-            privateKey: privateKey ? Buffer.from(privateKey, "base64") : undefined,
-            password: password || undefined,
+// MongoDB Schema for Razorpay order details
+const orderSchema = new mongoose.Schema({
+    order_id: String,
+    amount: Number,
+    currency: String,
+    receipt: String,
+    status: { type: String, default: "created" },
+    created_at: { type: Date, default: Date.now },
+    duration: Number,
+    start_date: Date,
+    end_date: Date,
+    participant_name: String,
+    quantity: Number,
+    email: String, // Store email for sending the invoice
+});
+
+const Order = mongoose.model("Order", orderSchema);
+
+// Razorpay order creation API
+app.post("/orders", async (req, res) => {
+    const { amount, currency, duration, start_date, participant_name, quantity, email } = req.body;
+
+    // Validate the request body parameters
+    if (!amount || !duration || !start_date || !participant_name || !quantity || !email) {
+        return res.status(400).json({ error: "Invalid or missing parameters" });
+    }
+
+    const options = {
+        amount: amount * 100, // Convert to paise (Razorpay expects paise)
+        currency: currency || "INR", // Default to INR if currency is not provided
+        receipt: `receipt_${Date.now()}`, // Generate unique receipt ID
+        payment_capture: 1, // Auto-capture the payment
+    };
+
+    try {
+        const response = await razorpay.orders.create(options);
+
+        // Create start and end dates for the order
+        const startDate = new Date(start_date);
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + duration);
+
+        // Save the order in MongoDB
+        const newOrder = new Order({
+            order_id: response.id,
+            amount: response.amount / 100, // Convert back to INR
+            currency: response.currency,
+            receipt: response.receipt,
+            duration,
+            start_date: startDate,
+            end_date: endDate,
+            participant_name,
+            quantity,
+            email, // Store email for future invoice sending
         });
+
+        await newOrder.save();
+
+        // Respond with the Razorpay order details
+        res.json({
+            order_id: response.id,
+            currency: response.currency,
+            amount: response.amount / 100, // Convert to INR
+        });
+    } catch (error) {
+        console.error("Error creating Razorpay order:", error.message || error);
+        res.status(500).json({ error: "Failed to create order. Please try again.", details: error.message });
+    }
+});
+
+// Payment success API - send invoice after payment is successful
+app.post("/payment/success", async (req, res) => {
+    const { order_id, email } = req.body; // Expecting order_id and email from the frontend
+
+    try {
+        console.log(`Received payment success for order_id: ${order_id} and email: ${email}`);
+
+        // Find the order in the database
+        const order = await Order.findOne({ order_id });
+        if (!order) {
+            console.error("Order not found.");
+            return res.status(404).json({ error: "Order not found." });
+        }
+
+        // Update the order status to 'paid'
+        order.status = "paid";
+        await order.save();
+
+        // Prepare invoice data
+        const invoiceData = {
+            orderId: order.order_id,
+            amount: order.amount,
+            currency: order.currency,
+            start_date: order.start_date,
+            end_date: order.end_date,
+            participant_name: order.participant_name,
+            quantity: order.quantity,
+            email: email, // Send the invoice to the user's email (could be from the order or passed in the request)
+        };
+
+        // Log before sending email
+        console.log("Preparing to send invoice email...");
+
+        // Send the invoice email using the email service
+        await emailService(invoiceData);
+
+        // Log after sending email
+        console.log("Invoice email sent successfully.");
+
+        // Send a success response
+        res.json({ message: "Payment successful and invoice sent." });
+    } catch (error) {
+        console.error("Error processing payment:", error);
+        res.status(500).json({ error: "Failed to process payment. Please try again." });
+    }
 });
 
 // Start the server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+const port = process.env.PORT || 5000;
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});
