@@ -1,26 +1,101 @@
 require('dotenv').config(); // Load environment variables
-
 const express = require("express");
 const mongoose = require("mongoose");
 const Razorpay = require("razorpay");
-const emailService = require("./emailService"); // Email service for sending the invoice
 const cors = require("cors"); // Import CORS
+const bcrypt = require('bcryptjs'); // For password hashing
+const jwt = require('jsonwebtoken'); // For JWT
 const { spawn } = require('child_process'); // For opening PuTTY
 
 const app = express();
 
 // Enable CORS for all origins
-app.use(cors()); // This will allow all origins. You can configure it further if needed.
+app.use(cors());
 
 // Middleware
 app.use(express.json());
 
 // MongoDB setup
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/razorpayOrders'; // MongoDB URI
+const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/razorpayOrders';
 mongoose
     .connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log("Connected to MongoDB"))
     .catch((err) => console.error("MongoDB connection error:", err));
+
+// MongoDB Schema for Razorpay order details
+const orderSchema = new mongoose.Schema({
+    order_id: String,
+    amount: Number,
+    currency: String,
+    receipt: String,
+    status: { type: String, default: "created" },
+    created_at: { type: Date, default: Date.now },
+    duration: Number,
+    start_date: Date,
+    end_date: Date,
+    participant_name: String,
+    quantity: Number,
+    email: String, // Store email for sending the invoice
+});
+
+const Order = mongoose.model('Order', orderSchema); // Add this line to define the model
+
+// Razorpay instance setup
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_yZLR0HdMtSX5Hk", // Your Razorpay Key ID
+    key_secret: process.env.RAZORPAY_KEY_SECRET || "63z6wLMBLp1vAbsjpc7q5Rzk", // Your Razorpay Key Secret
+});
+
+// Razorpay order creation API
+app.post("/api/orders/create", async (req, res) => {
+    const { amount, currency, receipt, email } = req.body;
+
+    try {
+        const options = {
+            amount: amount * 100, // Amount in the smallest currency unit
+            currency,
+            receipt,
+        };
+
+        const order = await razorpay.orders.create(options);
+
+        const newOrder = new Order({
+            order_id: order.id,
+            amount: options.amount,
+            currency: options.currency,
+            receipt: options.receipt,
+            email,
+        });
+
+        await newOrder.save();
+        res.json({ order, newOrder });
+    } catch (error) {
+        console.error("Razorpay order creation error:", error);
+        res.status(500).json({ message: "Failed to create Razorpay order." });
+    }
+});
+
+// Razorpay payment success route
+app.post("/api/orders/success", async (req, res) => {
+    const { order_id } = req.body;
+
+    try {
+        const order = await Order.findOne({ order_id });
+        if (!order) {
+            return res.status(404).json({ message: "Order not found." });
+        }
+
+        order.status = "paid";
+        await order.save();
+
+        // Send confirmation (use email service if available)
+        console.log(`Payment successful for order ${order_id}.`);
+        res.json({ message: "Payment successful." });
+    } catch (error) {
+        console.error("Payment success error:", error);
+        res.status(500).json({ message: "Failed to process payment success." });
+    }
+});
 
 // API to open PuTTY
 app.get("/api/open-putty", (req, res) => {
@@ -41,129 +116,6 @@ app.get("/api/open-putty", (req, res) => {
     } catch (error) {
         console.error("Unexpected error opening PuTTY:", error);
         res.status(500).json({ error: "Unexpected error occurred while opening PuTTY." });
-    }
-});
-
-// Razorpay setup (with hardcoded keys)
-const razorpay = new Razorpay({
-    key_id: "rzp_test_yZLR0HdMtSX5Hk", // Razorpay key_id
-    key_secret:"63z6wLMBLp1vAbsjpc7q5Rzk", // Razorpay key_secret
-});
-
-// MongoDB Schema for Razorpay order details
-const orderSchema = new mongoose.Schema({
-    order_id: String,
-    amount: Number,
-    currency: String,
-    receipt: String,
-    status: { type: String, default: "created" },
-    created_at: { type: Date, default: Date.now },
-    duration: Number,
-    start_date: Date,
-    end_date: Date,
-    participant_name: String,
-    quantity: Number,
-    email: String, // Store email for sending the invoice
-});
-
-const Order = mongoose.model("Order", orderSchema);
-
-// Razorpay order creation API
-app.post("/orders", async (req, res) => {
-    const { amount, currency, duration, start_date, participant_name, quantity, email } = req.body;
-
-    // Validate the request body parameters
-    if (!amount || !duration || !start_date || !participant_name || !quantity || !email) {
-        return res.status(400).json({ error: "Invalid or missing parameters" });
-    }
-
-    const options = {
-        amount: amount * 100, // Convert to paise (Razorpay expects paise)
-        currency: currency || "INR", // Default to INR if currency is not provided
-        receipt: `receipt_${Date.now()}`, // Generate unique receipt ID
-        payment_capture: 1, // Auto-capture the payment
-    };
-
-    try {
-        const response = await razorpay.orders.create(options);
-
-        // Create start and end dates for the order
-        const startDate = new Date(start_date);
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + duration);
-
-        // Save the order in MongoDB
-        const newOrder = new Order({
-            order_id: response.id,
-            amount: response.amount / 100, // Convert back to INR
-            currency: response.currency,
-            receipt: response.receipt,
-            duration,
-            start_date: startDate,
-            end_date: endDate,
-            participant_name,
-            quantity,
-            email, // Store email for future invoice sending
-        });
-
-        await newOrder.save();
-
-        // Respond with the Razorpay order details
-        res.json({
-            order_id: response.id,
-            currency: response.currency,
-            amount: response.amount / 100, // Convert to INR
-        });
-    } catch (error) {
-        console.error("Error creating Razorpay order:", error.message || error);
-        res.status(500).json({ error: "Failed to create order. Please try again.", details: error.message });
-    }
-});
-
-// Payment success API - send invoice after payment is successful
-app.post("/payment/success", async (req, res) => {
-    const { order_id, email } = req.body; // Expecting order_id and email from the frontend
-
-    try {
-        console.log(`Received payment success for order_id: ${order_id} and email: ${email}`);
-
-        // Find the order in the database
-        const order = await Order.findOne({ order_id });
-        if (!order) {
-            console.error("Order not found.");
-            return res.status(404).json({ error: "Order not found." });
-        }
-
-        // Update the order status to 'paid'
-        order.status = "paid";
-        await order.save();
-
-        // Prepare invoice data
-        const invoiceData = {
-            orderId: order.order_id,
-            amount: order.amount,
-            currency: order.currency,
-            start_date: order.start_date,
-            end_date: order.end_date,
-            participant_name: order.participant_name,
-            quantity: order.quantity,
-            email: email, // Send the invoice to the user's email (could be from the order or passed in the request)
-        };
-
-        // Log before sending email
-        console.log("Preparing to send invoice email...");
-
-        // Send the invoice email using the email service
-        await emailService(invoiceData);
-
-        // Log after sending email
-        console.log("Invoice email sent successfully.");
-
-        // Send a success response
-        res.json({ message: "Payment successful and invoice sent." });
-    } catch (error) {
-        console.error("Error processing payment:", error);
-        res.status(500).json({ error: "Failed to process payment. Please try again." });
     }
 });
 
