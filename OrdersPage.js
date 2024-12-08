@@ -1,52 +1,110 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 import './ordersPage.css';
 
 const OrdersPage = ({ onAddToCart }) => {
     const [participantName, setParticipantName] = useState('');
     const [quantity, setQuantity] = useState(1);
-    const [selectedPlan, setSelectedPlan] = useState('shortTerm');
-    const [loading, setLoading] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState(null);
+    const [selectedNodes, setSelectedNodes] = useState(null);
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
+    const [labFacility, setLabFacility] = useState('');
+    const [selectedLibrary, setSelectedLibrary] = useState(null);
+    const [file, setFile] = useState(null);
+    const [uploadedFiles, setUploadedFiles] = useState([]);
+    const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
 
-    const planDetails = selectedPlan === 'shortTerm'
-        ? { amount: 50000, days: 10 }
-        : { amount: 100000, days: 30 };
-
-    const handleQuantityChange = (change) => {
-        setQuantity((prevQuantity) => Math.max(1, prevQuantity + change));
+    const planDetails = {
+        shortTermInitiative: { baseAmount: 1000, duration: 10 },
+        longTermInitiative: { baseAmount: 5000, duration: 30 },
     };
 
-    const handlePlanChange = (event) => setSelectedPlan(event.target.value);
+    const libraryInfo = {
+        OpenMP: 'OpenMP is a parallel programming model for shared memory systems.',
+        MPI: 'MPI is a standard for parallel programming in distributed memory systems.',
+        CUDA: 'CUDA is a parallel computing platform and programming model for Nvidia GPUs.',
+        SYCL: 'SYCL is a C++ programming model for heterogeneous computing systems.'
+    };
 
     useEffect(() => {
-        const updatedEndDate = new Date(startDate);
-        updatedEndDate.setDate(updatedEndDate.getDate() + planDetails.days * quantity);
-        setEndDate(updatedEndDate);
+        if (selectedPlan) {
+            const updatedEndDate = new Date(startDate);
+            updatedEndDate.setDate(updatedEndDate.getDate() + planDetails[selectedPlan].duration * quantity);
+            setEndDate(updatedEndDate);
+        }
     }, [startDate, selectedPlan, quantity]);
 
+    const handlePlanSelection = (plan) => {
+        setSelectedPlan(plan);
+        setSelectedNodes(null);
+    };
+
+    const handleNodeChange = (event) => {
+        setSelectedNodes(Number(event.target.value));
+    };
+
+    const handleLibrarySelection = (event) => {
+        const { value, checked } = event.target;
+        if (checked) {
+            setSelectedLibrary(value);
+        } else {
+            setSelectedLibrary(null);
+        }
+    };
+
+    const calculateAmount = () => {
+        if (selectedPlan && selectedNodes) {
+            return planDetails[selectedPlan].baseAmount * selectedNodes * quantity;
+        }
+        return 0;
+    };
+
     const handleAddToCart = () => {
-        if (!participantName.trim()) {
-            alert('Please enter the participant name.');
+        if (!participantName.trim() || !selectedPlan || !selectedNodes) {
+            alert('Please fill all required fields.');
             return;
         }
-
         const item = {
-            amount: planDetails.amount * quantity,
-            duration: planDetails.days * quantity,
+            amount: calculateAmount(),
+            duration: planDetails[selectedPlan].duration * quantity,
             participantName,
             quantity,
+            selectedNodes,
             startDate: startDate.toISOString().split('T')[0],
             endDate: endDate.toISOString().split('T')[0],
+            labFacility,
+            selectedLibrary,
+            file,
         };
-
         onAddToCart(item);
     };
 
+    // Create Excel File Function
+    const createExcelFile = (uploadedFile) => {
+        const data = [[`Uploaded File: ${uploadedFile.name}`]];
+        const worksheet = XLSX.utils.aoa_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Files');
+        XLSX.writeFile(workbook, 'UploadedFiles.xlsx');
+    };
+
+    // Handle File Upload and Add to Excel
+    const handleFileUpload = (event) => {
+        const uploadedFile = event.target.files[0];
+        if (uploadedFile) {
+            setFile(uploadedFile);
+            setUploadedFiles((prevFiles) => [...prevFiles, uploadedFile.name]);
+            createExcelFile(uploadedFile);
+        }
+    };
+
+
+    // Load Razorpay script dynamically
     const loadRazorpayScript = () => {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -67,131 +125,210 @@ const OrdersPage = ({ onAddToCart }) => {
             setLoading(true);
             await loadRazorpayScript();
 
-            const response = await axios.post('http://localhost:5000/orders', {
-                amount: planDetails.amount * quantity,
+            const response = await axios.post('http://localhost:5000/api/orders/create', {
+                amount: calculateAmount(),
                 currency: 'INR',
-                duration: planDetails.days * quantity,
-                start_date: startDate.toISOString().split('T')[0],
-                participant_name: participantName,
-                quantity,
+                receipt: 'order_receipt',
+                email: 'user@example.com',
             });
 
-            const order = response.data;
+            console.log('Order Response:', response); // Log the response from the backend
+            const order = response.data.order;
 
             const options = {
-                key: 'rzp_test_1BkbvUiG6Er2NL',
+                key: 'rzp_test_yZLR0HdMtSX5Hk',
                 amount: order.amount,
                 currency: order.currency,
-                order_id: order.order_id,
+                order_id: order.id,
                 handler: function (response) {
+                    console.log('Payment Response:', response); // Log payment response
                     axios
-                        .post('http://localhost:5000/payment/success', {
-                            order_id: order.order_id,
+                        .post('http://localhost:5000/api/orders/success', {
+                            order_id: order.id,
                             payment_id: response.razorpay_payment_id,
                             participantName,
                         })
                         .then(() => {
                             alert('Payment successful!');
-                            navigate('/Jupyterputty'); // Navigate to JupyterPutty page
+                            navigate('/AutoInstallation'); 
                         })
-                        .catch((err) => {
-                            console.error('Payment error:', err);
-                            alert('Payment failed, please try again.');
+                        .catch((error) => {
+                            console.error('Error during payment confirmation:', error);
+                            alert('Payment failed.');
                         });
                 },
                 prefill: {
                     name: participantName,
-                    email: 'test@example.com',
+                    email: 'user@example.com',
+                    contact: '1234567890',
                 },
                 theme: {
-                    color: '#F4C430',
+                    color: '#3399cc',
                 },
             };
 
-            const paymentObject = new window.Razorpay(options);
-            paymentObject.open();
+            const rzp = new window.Razorpay(options);
+            rzp.open();
         } catch (error) {
-            console.error('Error creating order:', error);
-            alert('Failed to create order. Please try again.');
+            console.error('Error during payment:', error);
+            alert('Error during payment.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleViewCart = () => {
-        navigate('/cart');
-    };
-
     return (
         <div className="orderpage-container">
-            <h2>Order Details</h2>
-
-            <div className="button-group">
-                <div className="option-button">
-                    <input
-                        type="radio"
-                        value="shortTerm"
-                        checked={selectedPlan === 'shortTerm'}
-                        onChange={handlePlanChange}
-                    />
-                    Short Term
-                </div>
-                <div className="option-button">
-                    <input
-                        type="radio"
-                        value="longTerm"
-                        checked={selectedPlan === 'longTerm'}
-                        onChange={handlePlanChange}
-                    />
-                    Long Term
-                </div>
+            <h1>Compute HPC Lab Resources</h1> {/* Updated heading here */}
+            {/* Left Side: Show Pricing Plans or Selected Plan Details */}
+            <div className="left-panel">
+                {!selectedPlan ? (
+                    <div className="pricing-section">
+                        <h2>Pricing Models</h2>
+                        <div className="pricing-cards">
+                            <div
+                                className="pricing-card"
+                                onClick={() => handlePlanSelection('shortTermInitiative')}
+                            >
+                                <h3>Short Term Initiative</h3>
+                            </div>
+                            <div
+                                className="pricing-card"
+                                onClick={() => handlePlanSelection('longTermInitiative')}
+                            >
+                                <h3>Long Term Initiative</h3>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="selected-plan-details">
+                        <h2>
+                            {selectedPlan === 'shortTermInitiative' ? 'Short Term Initiative' : 'Long Term Initiative'}
+                        </h2>
+                        <button className="change-plan" onClick={() => setSelectedPlan(null)}>
+                            Change Plan
+                        </button>
+                    </div>
+                )}
             </div>
 
-            <div className="plan-details">
-                <div className="plan-input-group">
-                    <label className="plan-label-input">Amount</label>
-                    <input className="plan-value-input" value={`₹${planDetails.amount * quantity}`} disabled />
-                </div>
-                <div className="plan-input-group">
-                    <label className="plan-label-input">Duration</label>
-                    <input className="plan-value-input" value={`${planDetails.days * quantity} days`} disabled />
-                </div>
-                <div className="plan-input-group">
-                    <label className="plan-label-input">Start Date</label>
-                    <input className="plan-value-input" value={startDate.toISOString().split('T')[0]} disabled />
-                </div>
-                <div className="plan-input-group">
-                    <label className="plan-label-input">End Date</label>
-                    <input className="plan-value-input" value={endDate.toISOString().split('T')[0]} disabled />
-                </div>
-            </div>
+            {selectedPlan && (
+                <div className="order-details">
+                    <div className="card">
+                        <h3>Select Nodes</h3>
+                        <div className="node-selection">
+                            <label>
+                                <input
+                                    type="radio"
+                                    value={2}
+                                    checked={selectedNodes === 2}
+                                    onChange={handleNodeChange}
+                                />
+                                2 Nodes
+                            </label>
+                            <label>
+                                <input
+                                    type="radio"
+                                    value={4}
+                                    checked={selectedNodes === 4}
+                                    onChange={handleNodeChange}
+                                />
+                                4 Nodes
+                            </label>
+                            <label>
+                                <input
+                                    type="radio"
+                                    value={6}
+                                    checked={selectedNodes === 6}
+                                    onChange={handleNodeChange}
+                                />
+                                6 Nodes
+                            </label>
+                        </div>
+                    </div>
 
-            <div className="participant-input-group">
-                <input
-                    className="participant-input"
-                    type="text"
-                    placeholder="Enter participant name"
-                    value={participantName}
-                    onChange={(e) => setParticipantName(e.target.value)}
-                />
-            </div>
+                    <div className="card">
+                        <h3>Participant Details</h3>
+                        <input
+                            type="text"
+                            placeholder="Enter Participant Name"
+                            value={participantName}
+                            onChange={(e) => setParticipantName(e.target.value)}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Enter lab facility details"
+                            value={labFacility}
+                            onChange={(e) => setLabFacility(e.target.value)}
+                        />
+                        <input type="file" onChange={handleFileUpload} />
+                    </div>
 
-            <div className="quantity-toggle-group">
-                <button onClick={() => handleQuantityChange(-1)}>-</button>
-                <span>{quantity}</span>
-                <button onClick={() => handleQuantityChange(1)}>+</button>
-            </div>
+                    <div className="card">
+                        <h3>Select Libraries</h3>
+                        <div className="libraries">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    value="OpenMP"
+                                    onChange={handleLibrarySelection}
+                                />
+                                OpenMP
+                            </label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    value="MPI"
+                                    onChange={handleLibrarySelection}
+                                />
+                                MPI
+                            </label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    value="CUDA"
+                                    onChange={handleLibrarySelection}
+                                />
+                                CUDA
+                            </label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    value="SYCL"
+                                    onChange={handleLibrarySelection}
+                                />
+                                SYCL
+                            </label>
+                        </div>
+                        <div className="library-info">
+                            {selectedLibrary && (
+                                <div className="info-item">
+                                    <h4>{selectedLibrary}</h4>
+                                    <p>{libraryInfo[selectedLibrary]}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-            <div className="button-group">
-                <button className="cart-button" onClick={handleAddToCart}>Add to Cart</button>
-                <button className="view-cart-button" onClick={handleViewCart}>View Cart</button>
-                <button className="payment-button" onClick={handlePayment} disabled={loading}>
-                    {loading ? 'Processing...' : 'Proceed to Payment'}
-                </button>
-            </div>
+
+                    <div className="card summary">
+                        <p>Amount: ₹{calculateAmount()}</p>
+                        <p>Duration: {selectedPlan ? planDetails[selectedPlan].duration * quantity : 0} days</p>
+                        <p>Start Date: {startDate.toISOString().split('T')[0]}</p>
+                        <p>End Date: {endDate.toISOString().split('T')[0]}</p>
+                    </div>
+
+                    <button
+                        className="pay-button"
+                        onClick={handlePayment}
+                        disabled={loading || !participantName || !selectedNodes}
+                    >
+                        {loading ? 'Processing...' : 'Proceed to Payment'}
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
 
 export default OrdersPage;
-
