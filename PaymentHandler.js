@@ -61,7 +61,7 @@ const PaymentHandler = ({ onPaymentSuccess }) => {
 
             // Razorpay options
             const options = {
-                key: 'rzp_test_1BkbvUiG6Er2NL', // Replace with your Razorpay Test API Key
+                key: '', // Replace with your Razorpay Test API Key
                 amount: order.amount, // Amount in paise
                 currency: 'INR',
                 name: 'Your Company Name',
