@@ -46,7 +46,7 @@ function CartPage({ cart, onRemoveItem }) {
             const { order_id, amount: orderAmount, currency } = response.data;
 
             const options = {
-                key: 'rzp_test_yZLR0HdMtSX5Hk',  // Replace with actual Razorpay key
+                key: '',  // Replace with actual Razorpay key
                 amount: orderAmount,
                 currency: currency,
                 order_id: order_id,
