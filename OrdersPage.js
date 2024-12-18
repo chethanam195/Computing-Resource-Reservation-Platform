@@ -136,7 +136,7 @@ const OrdersPage = ({ onAddToCart }) => {
             const order = response.data.order;
 
             const options = {
-                key: 'rzp_test_yZLR0HdMtSX5Hk',
+                key: '',
                 amount: order.amount,
                 currency: order.currency,
                 order_id: order.id,
