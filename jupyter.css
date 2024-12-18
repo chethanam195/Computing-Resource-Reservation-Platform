@@ -1,0 +1,67 @@
+/* General Page Styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa; /* Light gray background for the page */
+    margin: 0;
+    padding: 0;
+}
+
+/* Container Styling */
+div {
+    text-align: center;
+    padding: 20px;
+}
+
+/* Heading Styling */
+h1 {
+    color: #343a40; /* Dark gray text */
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+}
+
+/* Button Styling */
+button {
+    background-color: #007bff; /* Bootstrap primary blue */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 10px;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+    button:hover {
+        background-color: #0056b3; /* Darker blue on hover */
+        transform: scale(1.05); /* Slight zoom effect */
+    }
+
+    button:active {
+        background-color: #003d80; /* Even darker blue when active */
+        transform: scale(0.95); /* Slight press effect */
+    }
+
+/* Iframe Styling */
+iframe {
+    margin-top: 20px;
+    border: 2px solid #007bff; /* Blue border */
+    border-radius: 5px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2rem;
+    }
+
+    button {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+
+    iframe {
+        height: 400px; /* Adjust iframe height for smaller screens */
+    }
+}
