@@ -42,8 +42,8 @@ const Order = mongoose.model('Order', orderSchema); // Add this line to define t
 
 // Razorpay instance setup
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_yZLR0HdMtSX5Hk", // Your Razorpay Key ID
-    key_secret: process.env.RAZORPAY_KEY_SECRET || "63z6wLMBLp1vAbsjpc7q5Rzk", // Your Razorpay Key Secret
+    key_id:"", // Your Razorpay Key ID
+    key_secret: "", // Your Razorpay Key Secret
 });
 
 // Razorpay order creation API
