@@ -1,103 +1,122 @@
-auto-installation-container {
-    width: 70%;
-    margin: 0 auto;
-    padding: 30px;
-    background-color: #f8f9fa;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+/* General Styling */
+.auto-installation-container {
     font-family: 'Arial', sans-serif;
+    margin: 0 auto;
+    padding: 20px;
+    max-width: 1200px;
+    background-color: #f4f7fa;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-.installation-header {
+h1 {
+    font-size: 26px;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+/* Search Bar */
+.search-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.search-input {
+    width: 70%;
+    padding: 8px;
+    font-size: 14px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+/* Categories Container (Horizontally Aligned but Non-Wrapping) */
+.categories-container {
+    display: flex;
+    justify-content: flex-start;
+    gap: 20px;
+    flex-wrap: nowrap; /* Prevent wrapping */
+    width: 100%;
+    overflow-x: auto; /* Allows horizontal scrolling if content overflows */
+}
+
+/* Command Category Box (Each category as a box) */
+.command-category-box {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 15px;
     text-align: center;
-    margin-bottom: 40px;
+    flex: 1 0 300px; /* Flexbox item with a minimum size */
+    min-width: 300px;
+    max-width: 350px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-    .installation-header h1 {
-        font-size: 2.5em;
-        color: #333;
+    /* Category Title */
+    .command-category-box h2 {
+        font-size: 18px;
+        color: #007bff;
         margin-bottom: 10px;
     }
 
-    .installation-header p {
-        font-size: 1.2em;
-        color: #555;
+/* Commands Container (Vertically Aligned Inside Each Category) */
+.commands-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Command Box (Each command) */
+.command-box {
+    background-color: #f1f1f1;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+}
+
+    .command-box p {
+        font-size: 14px;
+        color: #333;
         margin-bottom: 5px;
     }
 
-    .installation-header strong {
-        color: #007bff;
-    }
-
-.download-options {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    margin-top: 40px;
-}
-
-.download-version {
-    background-color: #ffffff;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
-
-    .download-version h2 {
-        font-size: 1.8em;
-        color: #007bff;
-        margin-bottom: 20px;
-    }
-
-.download-card h3 {
-    font-size: 1.5em;
-    color: #333;
-    margin-bottom: 10px;
-}
-
-.download-btn {
+/* Copy Button */
+.command-btn {
     background-color: #007bff;
     color: white;
+    padding: 8px 12px;
+    font-size: 14px;
     border: none;
-    padding: 12px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1.1em;
-    margin-bottom: 10px;
-    transition: background-color 0.3s ease, transform 0.3s ease;
-}
-
-    .download-btn:hover {
-        background-color: #0056b3;
-        transform: scale(1.05);
-    }
-
-    .download-btn:active {
-        background-color: #004085;
-    }
-
-.footer {
-    text-align: center;
-    margin-top: 40px;
-}
-
-.finish-btn {
-    padding: 12px 30px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-size: 1.2em;
+    border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+    width: 100%;
 }
 
-    .finish-btn:hover {
-        background-color: #218838;
+    .command-btn:hover {
+        background-color: #0056b3;
     }
 
-    .finish-btn:active {
-        background-color: #1e7e34;
+/* Footer */
+.footer {
+    margin-top: 20px;
+    text-align: center;
+    width: 100%;
+}
+
+    .footer p {
+        font-size: 14px;
+        color: green;
     }
