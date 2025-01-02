@@ -1,86 +1,100 @@
-import React from 'react';
-import './AutoInstallation.css';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import './PackageManager.css';
 
-const AutoInstallationPage = () => {
-    const navigate = useNavigate();
+const CommandExecutor = () => {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [output, setOutput] = useState('');
 
-    // Handle the download link click event
-    const handleDownload = (url) => {
-        window.location.href = url; // Redirects to the download URL
+    const categories = {
+        httpd: [
+            'yum install httpd',
+            'yum remove httpd',
+            'systemctl start httpd',
+            'systemctl stop httpd',
+            'systemctl restart httpd',
+            'systemctl status httpd',
+        ],
+        python: [
+            'yum install python3',
+            'yum remove python3',
+            'yum install python3-pip',
+            'yum remove python3-pip',
+            'yum update python3',
+        ],
+        mysql: [
+            'yum install mysql',
+            'yum remove mysql',
+            'systemctl start mysql',
+            'systemctl stop mysql',
+            'systemctl restart mysql',
+            'systemctl status mysql',
+        ],
     };
 
-    // Navigate to OrderPage when Finish is clicked
-    const handleFinish = () => {
-        navigate('/Jupyterputty');
+    const handleCopyCommand = (command) => {
+        navigator.clipboard.writeText(command).then(
+            () => setOutput(`Copied to clipboard: ${command}`),
+            (err) => setOutput(`Failed to copy: ${err}`)
+        );
     };
+
+    const filteredCategories = Object.keys(categories).reduce((acc, category) => {
+        const filteredCommands = categories[category].filter((cmd) =>
+            cmd.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        if (filteredCommands.length > 0) {
+            acc[category] = filteredCommands;
+        }
+        return acc;
+    }, {});
 
     return (
         <div className="auto-installation-container">
-            <div className="installation-header">
-                <h1>Python Releases for Windows</h1>
-                <p>Latest Python 3 Release - <strong>Python 3.13.1</strong></p>
-                <p><em>Stable Releases</em> - Python 3.12.8 - Dec. 3, 2024</p>
-                <p><strong>Note:</strong> Python 3.12.8 cannot be used on Windows 7 or earlier.</p>
+            <h1>Command Copy Tool</h1>
+
+            {/* Search Bar */}
+            <div className="search-container">
+                <input
+                    className="search-input"
+                    type="text"
+                    placeholder="Search for a command..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
             </div>
 
-            <div className="download-options">
-                <div className="download-version">
-                    <h2>Latest Python 3 Release</h2>
-                    <div className="download-card">
-                        <h3>Python 3.13.1</h3>
-                        <button
-                            onClick={() => handleDownload('https://www.python.org/ftp/python/3.13.1/python-3.13.1-amd64.exe')}
-                            className="download-btn"
-                        >
-                            Download Windows Installer (64-bit)
-                        </button>
-                        <button
-                            onClick={() => handleDownload('https://www.python.org/ftp/python/3.13.1/python-3.13.1.exe')}
-                            className="download-btn"
-                        >
-                            Download Windows Installer (32-bit)
-                        </button>
-                        <button
-                            onClick={() => handleDownload('https://www.python.org/ftp/python/3.13.1/python-3.13.1-arm64.exe')}
-                            className="download-btn"
-                        >
-                            Download Windows Installer (ARM64)
-                        </button>
-                    </div>
-                </div>
-
-                <div className="download-version">
-                    <h2>Stable Releases</h2>
-                    <div className="download-card">
-                        <h3>Python 3.12.8</h3>
-                        <button
-                            onClick={() => handleDownload('https://www.python.org/ftp/python/3.12.8/python-3.12.8-amd64.exe')}
-                            className="download-btn"
-                        >
-                            Download Windows Installer (64-bit)
-                        </button>
-                        <button
-                            onClick={() => handleDownload('https://www.python.org/ftp/python/3.12.8/python-3.12.8.exe')}
-                            className="download-btn"
-                        >
-                            Download Windows Installer (32-bit)
-                        </button>
-                        <button
-                            onClick={() => handleDownload('https://www.python.org/ftp/python/3.12.8/python-3.12.8-arm64.exe')}
-                            className="download-btn"
-                        >
-                            Download Windows Installer (ARM64)
-                        </button>
-                    </div>
-                </div>
+            {/* Command Categories */}
+            <div className="categories-container">
+                {searchQuery && Object.keys(filteredCategories).length > 0 ? (
+                    Object.keys(filteredCategories).map((category) => (
+                        <div className="command-category-box" key={category}>
+                            <h2>{category.toUpperCase()}</h2>
+                            <div className="commands-container">
+                                {filteredCategories[category].map((cmd, index) => (
+                                    <div className="command-box" key={index}>
+                                        <p>{cmd}</p>
+                                        <button
+                                            className="command-btn"
+                                            onClick={() => handleCopyCommand(cmd)}
+                                        >
+                                            Copy
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))
+                ) : searchQuery ? (
+                    <p>No commands found for "{searchQuery}"</p>
+                ) : (
+                    <p>Enter a search term to find commands.</p>
+                )}
             </div>
 
-            <div className="footer">
-                <button className="finish-btn" onClick={handleFinish}>Finish and Proceed</button>
-            </div>
+            {/* Output */}
+            {output && <div className="footer"><p>{output}</p></div>}
         </div>
     );
 };
 
-export default AutoInstallationPage;
+export default CommandExecutor;
