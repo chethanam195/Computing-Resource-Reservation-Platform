@@ -1,0 +1,41 @@
+import React, { useState } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import './App.css'; // Global styling
+import PackageManager from './PackageManager';
+import SSHLoginComponent from './SSHLoginComponent';
+
+const App = () => {
+    const [activeComponent, setActiveComponent] = useState(null);
+
+    const renderComponent = () => {
+        switch (activeComponent) {
+            case 'PackageManager':
+                return <PackageManager />;
+            case 'SSHLogin':
+                return <SSHLoginComponent />;
+            default:
+                return <h2>Select an option to proceed</h2>;
+        }
+    };
+
+    return (
+        <Router>
+            <div className="app-container">
+                <h1>Welcome to the Computing Resource Reservation Platform</h1>
+                <nav className="nav-container">
+                    <button onClick={() => setActiveComponent('PackageManager')}>
+                        Package Manager
+                    </button>
+                    <button onClick={() => setActiveComponent('SSHLogin')}>
+                        SSH Login
+                    </button>
+                </nav>
+                <div className="component-container">
+                    {renderComponent()}
+                </div>
+            </div>
+        </Router>
+    );
+};
+
+export default App;
