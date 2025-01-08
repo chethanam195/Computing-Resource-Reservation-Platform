@@ -1,0 +1,77 @@
+const express = require('express');
+const WebSocket = require('ws');
+const cors = require('cors');
+const { Client } = require('ssh2');
+
+const app = express();
+const server = app.listen(5000, '0.0.0.0', () => {
+    console.log('Server running on http://0.0.0.0:5000');
+});
+
+// Enable CORS
+app.use(cors({ origin: '*' }));
+app.use(express.json());
+
+// Create a WebSocket server
+const wss = new WebSocket.Server({ noServer: true });
+
+wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    let sshClient;
+
+    ws.on('message', (message) => {
+        const data = JSON.parse(message);
+
+        if (data.type === 'connect') {
+            const { username, password, host, port } = data;
+
+            sshClient = new Client();
+            sshClient
+                .on('ready', () => {
+                    console.log(`SSH connection to ${host} established`);
+                    ws.send(JSON.stringify({ type: 'output', data: `Connected to ${host}\r\n` }));
+
+                    sshClient.shell((err, stream) => {
+                        if (err) {
+                            console.error('Error starting shell:', err);
+                            ws.send(JSON.stringify({ type: 'error', message: err.message }));
+                            return;
+                        }
+
+                        stream
+                            .on('data', (chunk) => {
+                                ws.send(JSON.stringify({ type: 'output', data: chunk.toString() }));
+                            })
+                            .on('close', () => {
+                                sshClient.end();
+                            });
+
+                        ws.on('message', (message) => {
+                            const inputData = JSON.parse(message);
+                            if (inputData.type === 'input') {
+                                stream.write(inputData.data); // Forward input to the shell
+                            }
+                        });
+                    });
+                })
+                .on('error', (err) => {
+                    console.error('SSH Error:', err);
+                    ws.send(JSON.stringify({ type: 'error', message: err.message }));
+                })
+                .on('close', () => {
+                    ws.send(JSON.stringify({ type: 'output', data: `Disconnected from ${host}\r\n` }));
+                })
+                .connect({ host, port, username, password });
+        }
+    });
+
+    ws.on('close', () => {
+        if (sshClient) sshClient.end();
+    });
+});
+
+server.on('upgrade', (request, socket, head) => {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+    });
+});
